@@ -8,17 +8,48 @@ using namespace std;
 // -------------------------- C++ vPointer address values ---------------------------
 //ref link:https://www.youtube.com/watch?v=kGCSX6A2cxY&list=PLRwVmtr-pp05LyV3bYHwrFacNSNjbUqS6&index=16&t=2s
 
+/*
+
+To implement polymorphic behaviour for virtual methods or virtual base class during run time, compiler implementions add certain hidden members. This is compiler and platform specific behaviour. 
+The size of any polymorphic class can vary across different implementations of the compiler. This makes C++ object memory model non-compatible with C memory model.
+
+Well "any pointers" is actually the right guess. Every polymorphic class stores some additional "hidden" information in addition to explicitly declared data fields. 
+In a typical implementation it will store a pointer to so called Virtual Method Table (VMT). The size of that pointer is exactly what contributes extra bytes to the size of the class in your case.
+
+Apparently you are compiling your code on a 64-bit platform, which uses 8-byte pointers. 
+So the total size of your class is 8 for VMT pointer, 4 for your int a field and 4 more padding bytes to align the class size to 8-byte boundary. 
+If you compile your code in 32-bit mode, the sizeof for this class will probably evaluate to 8. 
+In single-inheritance hierarchy all classes will typically "share" the pointer introduced by the topmost polymorphic class in the hierarchy, meaning that the size of any polymorphic class grows by size of a single pointer. 
+But in multiple-inheritance hierarchy it is possible to end up with multiple hidden VMT pointers inside a single class, meaning that the size of such class will grow by size of a multiple pointers.
+
+*/
+
 // vPointer - required for polymorphism and OOP
+// vTable - is essentially a switch statement
+
+// reinterpret_cast - It returns the address of the Base instance to intPtr. intPtr and base are of different types that makes it necessary to use reinterpret_cast. In this case it returns the first for bytes of the class which is the VPTR pointing to the VTABLE so it returns the address of the VTABLE. Note that the address of the VTABLE always changes when starts running the example, this is because that new address space is assigned to the process.
+// dereferencing a pointer - in the example, he is printing the value stored in that address, for which you need to dereference the pointer. and you cannot dereference a void *. you also can’t increment it (++).
+
 
 struct Base			//using struct for public base
 {
 	int intMember;
+	//void foo() 		// C++ calls this as function in any language its called method
+	//{
+	//	cout << "it adds nothing" << endl;
+	//}
+	virtual void foo() {}	// virtual requires vTable
 };
 
 int main()
 {
 	Base base;
-	cout << sizeof(base) << endl;
+	base.intMember = 23;
+	//cout << sizeof(base) << endl;
+	int* intPtr = reinterpret_cast<int*>(&base);
+	cout << *intPtr << endl;   // dereference pointer	// output: vtable address
+	intPtr++;
+	cout << *intPtr << endl;	// output: -1806324688 32758
 }
 
 
